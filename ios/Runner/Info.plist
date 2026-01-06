@@ -51,8 +51,9 @@
 	<string>CircleScreen would like to use your camera to take photos directly for your display device. (Optional — only if you add camera support later)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-	<key>NSAllowsArbitraryLoads</key>
-	<true/>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>
