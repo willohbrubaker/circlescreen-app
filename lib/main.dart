@@ -1,16 +1,15 @@
-import 'dart:io';
-import 'dart:typed_data';
+import 'dart:async';
+import 'dart:math';
 
-import 'package:http_parser/http_parser.dart'; // For MediaType
+import 'package:http_parser/http_parser.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:gal/gal.dart';
 import 'dart:convert';
+import 'dart:io';
 
 void main() {
   runApp(const CircleScreenApp());
@@ -26,12 +25,10 @@ class CircleScreenApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        useMaterial3: true, // Enables modern color roles and nicer defaults
-        scaffoldBackgroundColor: const Color(
-          0xFF1A0D2C,
-        ), // Deeper purple-black base for more contrast/pop
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFF1A0D2C),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF2A1B4A), // Richer purple app bar
+          backgroundColor: Color(0xFF2A1B4A),
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
@@ -48,40 +45,28 @@ class CircleScreenApp extends StatelessWidget {
               ),
             ],
           ),
-          bodyLarge: const TextStyle(
-            color: Color(0xF2FFFFFF),
-          ), // ~95% opacity white, fully constant
-          bodyMedium: const TextStyle(
-            color: Color(0xCCFFFFFF),
-          ), // Optional: for slightly more transparent text
+          bodyLarge: const TextStyle(color: Color(0xF2FFFFFF)),
+          bodyMedium: const TextStyle(color: Color(0xCCFFFFFF)),
           bodySmall: const TextStyle(color: Colors.white70),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(
-              0xFF05ADED,
-            ), // Changed to cyan for main buttons
+            backgroundColor: const Color(0xFF05ADED),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
             elevation: 12,
-            shadowColor: const Color(
-              0xFF05ADED,
-            ).withOpacity(0.7), // Cyan glow shadow
+            shadowColor: const Color(0xFF05ADED).withOpacity(0.7),
           ),
         ),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(
-            0xFF7B2CBF,
-          ), // Rich mid-purple as base (vibrant but not too blue)
+          seedColor: const Color(0xFF7B2CBF),
           brightness: Brightness.dark,
-          primary: const Color(0xFF9F00E7), // Neon purple for main accents
-          secondary: const Color(0xFF05ADED), // Electric teal/cyan
-          tertiary: const Color(
-            0xFFFF6F98,
-          ), // Cotton candy hot pink (kept for small doses)
+          primary: const Color(0xFF9F00E7),
+          secondary: const Color(0xFF05ADED),
+          tertiary: const Color(0xFFFF6F98),
           surface: const Color(0xFF1A0D2C),
           background: const Color(0xFF1A0D2C),
         ),
@@ -124,11 +109,9 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: const Color(
-          0xFF05ADED,
-        ), // Changed to cyan for selected
+        selectedItemColor: const Color(0xFF05ADED),
         unselectedItemColor: Colors.white60,
-        backgroundColor: const Color(0xFF2A1B4A), // Matches app bar purple
+        backgroundColor: const Color(0xFF2A1B4A),
         onTap: _onItemTapped,
       ),
     );
@@ -143,102 +126,188 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  List<String> _imageFilenames = [];
+  String? _currentImageUrl;
+  Timer? _timer;
+
+  Future<void> _loadRandomImage() async {
+    try {
+      final response = await http.get(Uri.parse('$serverUrl/list'));
+      if (response.statusCode == 200 && mounted) {
+        final List<String> filenames = List<String>.from(
+          json.decode(response.body),
+        );
+        if (filenames.isNotEmpty) {
+          // Filter out 'current.jpg' if you don't want it included
+          final available = filenames.where((f) => f != 'current.jpg').toList();
+          if (available.isNotEmpty) {
+            final random = Random();
+            final selected = available[random.nextInt(available.length)];
+            setState(() {
+              _imageFilenames = available;
+              _currentImageUrl = '$serverUrl/images/$selected';
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // Silent fail — just show dark center if no images/network issue
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRandomImage();
+
+    // Change image every 10 seconds
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (_imageFilenames.isNotEmpty) {
+        final random = Random();
+        final selected =
+            _imageFilenames[random.nextInt(_imageFilenames.length)];
+        setState(() {
+          _currentImageUrl = '$serverUrl/images/$selected';
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _pickImages() async {
     final picker = ImagePicker();
     final pickedFiles = await picker.pickMultiImage(imageQuality: 85);
 
     if (pickedFiles.isNotEmpty && mounted) {
       final imageFiles = pickedFiles.map((f) => File(f.path)).toList();
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => MultiPreviewScreen(imageFiles: imageFiles),
-        ),
-      );
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute(
+              builder: (context) => MultiPreviewScreen(imageFiles: imageFiles),
+            ),
+          )
+          .then((_) {
+            // Refresh random image when returning from upload
+            _loadRandomImage();
+          });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('CircleScreen')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Rainbow hue wheel with glow halo
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 180,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: SweepGradient(
-                        colors: [
-                          Colors.red,
-                          Colors.orange,
-                          Colors.yellow,
-                          Colors.green,
-                          Colors.cyan,
-                          Colors.blue,
-                          const Color(0xFF8A2BE2), // Violet
-                          Colors.red,
-                        ],
-                        stops: [0.0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.84, 1.0],
+              // Glowing hue wheel with richer colors
+              Container(
+                width: 180,
+                height: 180,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF9F00E7).withOpacity(0.7),
+                      blurRadius: 40,
+                      spreadRadius: 12,
+                      offset: const Offset(0, 0),
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFFFF6F98).withOpacity(0.3),
+                      blurRadius: 60,
+                      spreadRadius: 15,
+                      offset: const Offset(0, 0),
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFF05ADED).withOpacity(0.6),
+                      blurRadius: 25,
+                      spreadRadius: -2,
+                      offset: const Offset(0, 0),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 180,
+                      height: 180,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: SweepGradient(
+                          colors: [
+                            const Color(0xFF00FFFF), // Bright cyan
+                            const Color(0xFF008B8B), // Dark cyan
+                            const Color(0xFF0000FF), // Pure blue
+                            const Color(0xFF8A2BE2), // Blue violet
+                            const Color(0xFF9F00E7), // Neon purple
+                            const Color(0xFF05ADED), // Electric teal
+                            const Color(0xFF20B2AA), // Light sea green
+                            const Color(0xFF00FFFF), // Back to bright cyan
+                          ],
+                          stops: const [
+                            0.0,
+                            0.15,
+                            0.3,
+                            0.45,
+                            0.6,
+                            0.75,
+                            0.9,
+                            1.0,
+                          ],
+                        ),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(
-                            0xFF9F00E7,
-                          ).withOpacity(0.7), // Stronger neon purple glow
-                          blurRadius: 40,
-                          spreadRadius: 12,
-                          offset: const Offset(0, 0),
-                        ),
-                        BoxShadow(
-                          color: const Color(
-                            0xFFFF6F98,
-                          ).withOpacity(0.3), // Subtle pink outer halo
-                          blurRadius: 60,
-                          spreadRadius: 15,
-                          offset: const Offset(0, 0),
-                        ),
-                        BoxShadow(
-                          color: const Color(
-                            0xFF05ADED,
-                          ).withOpacity(0.6), // Bright cyan inner glow
-                          blurRadius: 25,
-                          spreadRadius: -2,
-                          offset: const Offset(0, 0),
-                        ),
-                      ],
                     ),
-                  ),
-                  Container(
-                    width: 160,
-                    height: 160,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(
-                        0xFF1A0D2C,
-                      ), // Matches background to "punch" ring
+                    // Random image center with fade transition
+                    ClipOval(
+                      child: SizedBox(
+                        width: 160,
+                        height: 160,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 1200),
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                          child: _currentImageUrl != null
+                              ? CachedNetworkImage(
+                                  key: ValueKey(_currentImageUrl),
+                                  imageUrl: _currentImageUrl!,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                  errorWidget: (_, __, ___) =>
+                                      Container(color: const Color(0xFF1A0D2C)),
+                                )
+                              : Container(color: const Color(0xFF1A0D2C)),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 40),
               const Text(
                 'CircleScreen',
                 style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w200,
-                  letterSpacing: 1.5,
+                  fontSize: 48,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.8,
                   shadows: [
-                    Shadow(color: Color(0xFF9F00E7), blurRadius: 12),
-                    Shadow(color: Color(0xFFFF6F98), blurRadius: 20),
+                    Shadow(color: Color(0xFF9F00E7), blurRadius: 20),
+                    Shadow(color: Color(0xFF05ADED), blurRadius: 30),
+                    Shadow(color: Color(0xFFFF6F98), blurRadius: 40),
                   ],
                 ),
               ),
@@ -330,25 +399,19 @@ class PreviewScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(
-                        0xFF9F00E7,
-                      ).withOpacity(0.7), // Stronger neon purple glow
+                      color: const Color(0xFF9F00E7).withOpacity(0.7),
                       blurRadius: 40,
                       spreadRadius: 12,
                       offset: const Offset(0, 0),
                     ),
                     BoxShadow(
-                      color: const Color(
-                        0xFFFF6F98,
-                      ).withOpacity(0.3), // Subtle pink outer halo
+                      color: const Color(0xFFFF6F98).withOpacity(0.3),
                       blurRadius: 60,
                       spreadRadius: 15,
                       offset: const Offset(0, 0),
                     ),
                     BoxShadow(
-                      color: const Color(
-                        0xFF05ADED,
-                      ).withOpacity(0.6), // Bright cyan inner glow
+                      color: const Color(0xFF05ADED).withOpacity(0.6),
                       blurRadius: 25,
                       spreadRadius: -2,
                       offset: const Offset(0, 0),
@@ -409,10 +472,10 @@ class _MultiPreviewScreenState extends State<MultiPreviewScreen> {
 
         request.files.add(
           http.MultipartFile.fromBytes(
-            'image', // Field name — must be 'image'
+            'image',
             bytes,
             filename: 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg',
-            contentType: MediaType('image', 'jpeg'), // THIS IS THE KEY FIX
+            contentType: MediaType('image', 'jpeg'),
           ),
         );
 
@@ -423,11 +486,9 @@ class _MultiPreviewScreenState extends State<MultiPreviewScreen> {
         if (response.statusCode == 200) {
           successCount++;
         } else {
-          print('Server error: ${response.statusCode}');
           failCount++;
         }
       } catch (e) {
-        print('Exception: $e');
         failCount++;
       }
 
@@ -493,25 +554,19 @@ class _MultiPreviewScreenState extends State<MultiPreviewScreen> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(
-                                0xFF9F00E7,
-                              ).withOpacity(0.7), // Stronger neon purple glow
+                              color: const Color(0xFF9F00E7).withOpacity(0.7),
                               blurRadius: 40,
                               spreadRadius: 12,
                               offset: const Offset(0, 0),
                             ),
                             BoxShadow(
-                              color: const Color(
-                                0xFFFF6F98,
-                              ).withOpacity(0.3), // Subtle pink outer halo
+                              color: const Color(0xFFFF6F98).withOpacity(0.3),
                               blurRadius: 60,
                               spreadRadius: 15,
                               offset: const Offset(0, 0),
                             ),
                             BoxShadow(
-                              color: const Color(
-                                0xFF05ADED,
-                              ).withOpacity(0.6), // Bright cyan inner glow
+                              color: const Color(0xFF05ADED).withOpacity(0.6),
                               blurRadius: 25,
                               spreadRadius: -2,
                               offset: const Offset(0, 0),
@@ -532,9 +587,12 @@ class _MultiPreviewScreenState extends State<MultiPreviewScreen> {
             SafeArea(
               bottom: true,
               child: Padding(
-                padding: const EdgeInsets.all(20).add(
-                  const EdgeInsets.only(bottom: 20),
-                ), // Extra bottom padding for Android nav bar
+                padding: const EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: 40,
+                ),
                 child: ElevatedButton.icon(
                   onPressed: _uploadAll,
                   icon: const Icon(Icons.upload),
@@ -558,6 +616,9 @@ class GalleryScreen extends StatefulWidget {
 class _GalleryScreenState extends State<GalleryScreen> {
   Future<List<String>>? _imagesFuture;
   Set<String> selectedFilenames = {};
+  bool _isDownloading = false;
+  int _downloadedCount = 0;
+  int _totalToDownload = 0;
 
   @override
   void initState() {
@@ -595,6 +656,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Future<void> _downloadSelected() async {
+    setState(() {
+      _isDownloading = true;
+      _downloadedCount = 0;
+      _totalToDownload = selectedFilenames.length;
+    });
+
     int successCount = 0;
     int failCount = 0;
 
@@ -607,6 +674,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
             const SnackBar(content: Text('Photo library permission denied')),
           );
         }
+        setState(() => _isDownloading = false);
         return;
       }
     }
@@ -625,6 +693,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
       } catch (e) {
         failCount++;
       }
+
+      setState(() {
+        _downloadedCount = successCount + failCount;
+      });
     }
 
     if (mounted) {
@@ -641,37 +713,50 @@ class _GalleryScreenState extends State<GalleryScreen> {
       ).showSnackBar(SnackBar(content: Text(message)));
       setState(() {
         selectedFilenames.clear();
+        _isDownloading = false;
       });
     }
   }
 
-  Future<void> _setAsCurrent(String filename) async {
+  Future<void> _downloadSingle(String filename) async {
+    bool hasAccess = await Gal.hasAccess();
+    if (!hasAccess) {
+      hasAccess = await Gal.requestAccess();
+      if (!hasAccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo library permission denied')),
+        );
+        return;
+      }
+    }
+
+    // Show loading overlay for single download
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
-      final imgResponse = await http.get(
-        Uri.parse('$serverUrl/images/$filename'),
-      );
-      if (imgResponse.statusCode == 200) {
-        var request = http.MultipartRequest(
-          'POST',
-          Uri.parse('$serverUrl/upload'),
-        );
-        request.files.add(
-          http.MultipartFile.fromBytes('image', imgResponse.bodyBytes),
-        );
-        await request.send();
+      final response = await http.get(Uri.parse('$serverUrl/images/$filename'));
+      if (response.statusCode == 200) {
+        await Gal.putImageBytes(response.bodyBytes, album: 'CircleScreen');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$filename is now displayed!')),
-          );
-          _refreshImages();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Saved to gallery! 📸')));
         }
+      } else {
+        throw Exception('Download failed');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to set as current')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Save failed')));
       }
+    } finally {
+      if (mounted) Navigator.pop(context); // Close loading dialog
     }
   }
 
@@ -686,9 +771,25 @@ class _GalleryScreenState extends State<GalleryScreen> {
         ),
         actions: isSelecting
             ? [
+                if (_isDownloading)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          value: _totalToDownload > 0
+                              ? _downloadedCount / _totalToDownload
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.download),
-                  onPressed: _downloadSelected,
+                  onPressed: _isDownloading ? null : _downloadSelected,
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
@@ -785,71 +886,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
                               CupertinoActionSheetAction(
                                 child: const Text('Save to Device'),
                                 onPressed: () async {
-                                  Navigator.pop(
-                                    context,
-                                  ); // Close the action sheet
-
-                                  // gal handles permission prompting automatically, but we can check/request explicitly
-                                  final bool hasAccess = await Gal.hasAccess();
-                                  if (!hasAccess) {
-                                    final bool granted =
-                                        await Gal.requestAccess();
-                                    if (!granted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Photo library permission denied',
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                  }
-
-                                  try {
-                                    final response = await http.get(
-                                      Uri.parse('$serverUrl/images/$filename'),
-                                    );
-                                    if (response.statusCode != 200) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Failed to download image',
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
-
-                                    // Save directly from bytes — no temp file needed!
-                                    await Gal.putImageBytes(
-                                      response.bodyBytes,
-                                      album:
-                                          'CircleScreen', // Creates a nice grouped album
-                                    );
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Saved to gallery! 📸'),
-                                      ),
-                                    );
-                                  } on GalException catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Save failed: ${e.type.name}',
-                                        ),
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
-                                    );
-                                  }
+                                  Navigator.pop(context);
+                                  await _downloadSingle(filename);
                                 },
                               ),
                               CupertinoActionSheetAction(
