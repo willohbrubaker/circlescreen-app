@@ -13,8 +13,9 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   image_picker: ^1.2.1
-  cached_network_image: ^3.4.1
-  image_gallery_saver: ^2.0.3
+  cached_network_image: ^3.3.1
+  gal: ^2.2.0
+  path_provider: ^2.1.4      # Already likely there, but ensure it's present for temp files
   permission_handler: ^12.0.1
 
 dev_dependencies:

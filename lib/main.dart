@@ -3,12 +3,13 @@ import 'dart:typed_data';
 
 import 'package:http_parser/http_parser.dart'; // For MediaType
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:gal/gal.dart';
 import 'dart:convert';
 
 void main() {
@@ -76,11 +77,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    const GalleryScreen(),
-    const SettingsScreen(),
-  ];
+  final List<Widget> _pages = [const HomePage(), const GalleryScreen()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -98,10 +95,6 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.photo_library),
             label: 'Library',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
           ),
         ],
         currentIndex: _selectedIndex,
@@ -599,58 +592,69 @@ class _GalleryScreenState extends State<GalleryScreen> {
                               CupertinoActionSheetAction(
                                 child: const Text('Save to Device'),
                                 onPressed: () async {
-                                  Navigator.pop(context); // Close sheet first
+                                  Navigator.pop(
+                                    context,
+                                  ); // Close the action sheet
 
-                                  // Request permission if needed (Android/iOS)
-                                  var status = await Permission.photos
-                                      .request();
-                                  if (!status.isGranted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Photo save permission denied',
+                                  // gal handles permission prompting automatically, but we can check/request explicitly
+                                  final bool hasAccess = await Gal.hasAccess();
+                                  if (!hasAccess) {
+                                    final bool granted =
+                                        await Gal.requestAccess();
+                                    if (!granted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Photo library permission denied',
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                    return;
+                                      );
+                                      return;
+                                    }
                                   }
 
                                   try {
                                     final response = await http.get(
                                       Uri.parse('$serverUrl/images/$filename'),
                                     );
-                                    if (response.statusCode == 200) {
-                                      final result =
-                                          await ImageGallerySaver.saveImage(
-                                            Uint8List.fromList(
-                                              response.bodyBytes,
-                                            ),
-                                            quality: 100,
-                                            name: filename,
-                                          );
-                                      if (result['isSuccess']) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Saved to gallery!'),
+                                    if (response.statusCode != 200) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Failed to download image',
                                           ),
-                                        );
-                                      } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Save failed'),
-                                          ),
-                                        );
-                                      }
+                                        ),
+                                      );
+                                      return;
                                     }
-                                  } catch (e) {
+
+                                    // Save directly from bytes — no temp file needed!
+                                    await Gal.putImageBytes(
+                                      response.bodyBytes,
+                                      album:
+                                          'CircleScreen', // Creates a nice grouped album
+                                    );
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Download error'),
+                                        content: Text('Saved to gallery! 📸'),
                                       ),
+                                    );
+                                  } on GalException catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Save failed: ${e.type.name}',
+                                        ),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
                                     );
                                   }
                                 },
@@ -731,67 +735,5 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Future<void> _deleteImage(String filename) async {
     await http.delete(Uri.parse('$serverUrl/delete/$filename'));
     _refreshImages();
-  }
-}
-
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  final TextEditingController _controller = TextEditingController(
-    text: serverUrl,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Server Address',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w300),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: 'e.g. http://your-ip:9026',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                filled: true,
-                fillColor: Colors.white10,
-              ),
-              style: const TextStyle(color: Colors.white),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  serverUrl = _controller.text.trim();
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Server updated: $serverUrl')),
-                );
-              },
-              child: const Text('Save Server URL'),
-            ),
-            const SizedBox(height: 40),
-            Text(
-              'Current server: $serverUrl',
-              style: TextStyle(color: Colors.white60),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
