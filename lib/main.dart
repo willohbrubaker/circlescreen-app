@@ -26,12 +26,12 @@ class CircleScreenApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        primaryColor: Colors.amber[700],
+        useMaterial3: true, // Enables modern color roles and nicer defaults
         scaffoldBackgroundColor: const Color(
-          0xFF0F1C2E,
-        ), // Slightly warmer deep blue
+          0xFF1A0D2C,
+        ), // Deeper purple-black base for more contrast/pop
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1A2A44),
+          backgroundColor: Color(0xFF2A1B4A), // Richer purple app bar
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
@@ -40,24 +40,48 @@ class CircleScreenApp extends StatelessWidget {
           headlineMedium: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w300,
+            shadows: [
+              Shadow(
+                color: Color(0xFF9F00E7),
+                blurRadius: 8,
+                offset: Offset(0, 0),
+              ),
+            ],
           ),
-          bodyLarge: TextStyle(color: Colors.white.withOpacity(0.95)),
+          bodyLarge: const TextStyle(
+            color: Color(0xF2FFFFFF),
+          ), // ~95% opacity white, fully constant
+          bodyMedium: const TextStyle(
+            color: Color(0xCCFFFFFF),
+          ), // Optional: for slightly more transparent text
+          bodySmall: const TextStyle(color: Colors.white70),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.amber[600],
-            foregroundColor: Colors.black87, // Dark text on yellow for contrast
+            backgroundColor: const Color(
+              0xFFE9008D,
+            ), // Hot magenta/pink button (Lisa Frank classic)
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-            elevation: 8,
-            shadowColor: Colors.amber[900]!.withOpacity(0.5),
+            elevation: 12,
+            shadowColor: const Color(
+              0xFFFF6F98,
+            ).withOpacity(0.7), // Pink glow shadow
           ),
         ),
-        colorScheme: ColorScheme.dark(
-          primary: Colors.amber[600]!,
-          secondary: Colors.orange[400]!,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(
+            0xFF7B2CBF,
+          ), // Rich mid-purple as base (vibrant but not too blue)
+          brightness: Brightness.dark,
+          primary: const Color(0xFF9F00E7), // Neon purple for main accents
+          secondary: const Color(0xFF05ADED), // Electric teal/cyan
+          tertiary: const Color(0xFFFF6F98), // Cotton candy hot pink
+          surface: const Color(0xFF1A0D2C),
+          background: const Color(0xFF1A0D2C),
         ),
       ),
       home: const MainScreen(),
@@ -98,9 +122,9 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.amber[400],
+        selectedItemColor: const Color(0xFFFF6F98), // Hot pink for selected
         unselectedItemColor: Colors.white60,
-        backgroundColor: const Color(0xFF1B263B),
+        backgroundColor: const Color(0xFF2A1B4A), // Matches app bar purple
         onTap: _onItemTapped,
       ),
     );
@@ -139,7 +163,11 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.circle_outlined, size: 160, color: Colors.amber[300]),
+              Icon(
+                Icons.circle_outlined,
+                size: 160,
+                color: const Color(0xFF9F00E7),
+              ),
               const SizedBox(height: 40),
               const Text(
                 'CircleScreen',
@@ -147,6 +175,10 @@ class _HomePageState extends State<HomePage> {
                   fontSize: 40,
                   fontWeight: FontWeight.w200,
                   letterSpacing: 1.5,
+                  shadows: [
+                    Shadow(color: Color(0xFF9F00E7), blurRadius: 12),
+                    Shadow(color: Color(0xFFFF6F98), blurRadius: 20),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -238,9 +270,28 @@ class PreviewScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black45,
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      color: const Color(
+                        0xFF9F00E7,
+                      ).withOpacity(0.6), // Bright neon purple
+                      blurRadius: 30,
+                      spreadRadius: 8,
+                      offset: const Offset(0, 0),
+                    ),
+                    BoxShadow(
+                      color: const Color(
+                        0xFFFF6F98,
+                      ).withOpacity(0.4), // Add pink outer halo
+                      blurRadius: 50,
+                      spreadRadius: 12,
+                      offset: const Offset(0, 0),
+                    ),
+                    BoxShadow(
+                      color: const Color(
+                        0xFF05ADED,
+                      ).withOpacity(0.3), // Teal inner glow for depth
+                      blurRadius: 15,
+                      spreadRadius: -4,
+                      offset: const Offset(0, 0),
                     ),
                   ],
                 ),
@@ -379,9 +430,28 @@ class _MultiPreviewScreenState extends State<MultiPreviewScreen> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black45,
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+                              color: const Color(
+                                0xFF9F00E7,
+                              ).withOpacity(0.6), // Bright neon purple
+                              blurRadius: 30,
+                              spreadRadius: 8,
+                              offset: const Offset(0, 0),
+                            ),
+                            BoxShadow(
+                              color: const Color(
+                                0xFFFF6F98,
+                              ).withOpacity(0.4), // Add pink outer halo
+                              blurRadius: 50,
+                              spreadRadius: 12,
+                              offset: const Offset(0, 0),
+                            ),
+                            BoxShadow(
+                              color: const Color(
+                                0xFF05ADED,
+                              ).withOpacity(0.3), // Teal inner glow for depth
+                              blurRadius: 15,
+                              spreadRadius: -4,
+                              offset: const Offset(0, 0),
                             ),
                           ],
                         ),
