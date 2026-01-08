@@ -59,8 +59,8 @@ class CircleScreenApp extends StatelessWidget {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(
-              0xFFE9008D,
-            ), // Hot magenta/pink button (Lisa Frank classic)
+              0xFF05ADED,
+            ), // Changed to cyan for main buttons
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
@@ -68,8 +68,8 @@ class CircleScreenApp extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
             elevation: 12,
             shadowColor: const Color(
-              0xFFFF6F98,
-            ).withOpacity(0.7), // Pink glow shadow
+              0xFF05ADED,
+            ).withOpacity(0.7), // Cyan glow shadow
           ),
         ),
         colorScheme: ColorScheme.fromSeed(
@@ -79,7 +79,9 @@ class CircleScreenApp extends StatelessWidget {
           brightness: Brightness.dark,
           primary: const Color(0xFF9F00E7), // Neon purple for main accents
           secondary: const Color(0xFF05ADED), // Electric teal/cyan
-          tertiary: const Color(0xFFFF6F98), // Cotton candy hot pink
+          tertiary: const Color(
+            0xFFFF6F98,
+          ), // Cotton candy hot pink (kept for small doses)
           surface: const Color(0xFF1A0D2C),
           background: const Color(0xFF1A0D2C),
         ),
@@ -122,7 +124,9 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: const Color(0xFFFF6F98), // Hot pink for selected
+        selectedItemColor: const Color(
+          0xFF05ADED,
+        ), // Changed to cyan for selected
         unselectedItemColor: Colors.white60,
         backgroundColor: const Color(0xFF2A1B4A), // Matches app bar purple
         onTap: _onItemTapped,
@@ -163,10 +167,67 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.circle_outlined,
-                size: 160,
-                color: const Color(0xFF9F00E7),
+              // Rainbow hue wheel with glow halo
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 180,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: SweepGradient(
+                        colors: [
+                          Colors.red,
+                          Colors.orange,
+                          Colors.yellow,
+                          Colors.green,
+                          Colors.cyan,
+                          Colors.blue,
+                          const Color(0xFF8A2BE2), // Violet
+                          Colors.red,
+                        ],
+                        stops: [0.0, 0.14, 0.28, 0.42, 0.56, 0.7, 0.84, 1.0],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF9F00E7,
+                          ).withOpacity(0.7), // Stronger neon purple glow
+                          blurRadius: 40,
+                          spreadRadius: 12,
+                          offset: const Offset(0, 0),
+                        ),
+                        BoxShadow(
+                          color: const Color(
+                            0xFFFF6F98,
+                          ).withOpacity(0.3), // Subtle pink outer halo
+                          blurRadius: 60,
+                          spreadRadius: 15,
+                          offset: const Offset(0, 0),
+                        ),
+                        BoxShadow(
+                          color: const Color(
+                            0xFF05ADED,
+                          ).withOpacity(0.6), // Bright cyan inner glow
+                          blurRadius: 25,
+                          spreadRadius: -2,
+                          offset: const Offset(0, 0),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 160,
+                    height: 160,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(
+                        0xFF1A0D2C,
+                      ), // Matches background to "punch" ring
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 40),
               const Text(
@@ -262,7 +323,6 @@ class PreviewScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 21, color: Colors.white70),
               ),
               const SizedBox(height: 50),
-              // Exact 240x240 circle with subtle shadow
               Container(
                 width: 240,
                 height: 240,
@@ -272,25 +332,25 @@ class PreviewScreen extends StatelessWidget {
                     BoxShadow(
                       color: const Color(
                         0xFF9F00E7,
-                      ).withOpacity(0.6), // Bright neon purple
-                      blurRadius: 30,
-                      spreadRadius: 8,
-                      offset: const Offset(0, 0),
-                    ),
-                    BoxShadow(
-                      color: const Color(
-                        0xFFFF6F98,
-                      ).withOpacity(0.4), // Add pink outer halo
-                      blurRadius: 50,
+                      ).withOpacity(0.7), // Stronger neon purple glow
+                      blurRadius: 40,
                       spreadRadius: 12,
                       offset: const Offset(0, 0),
                     ),
                     BoxShadow(
                       color: const Color(
+                        0xFFFF6F98,
+                      ).withOpacity(0.3), // Subtle pink outer halo
+                      blurRadius: 60,
+                      spreadRadius: 15,
+                      offset: const Offset(0, 0),
+                    ),
+                    BoxShadow(
+                      color: const Color(
                         0xFF05ADED,
-                      ).withOpacity(0.3), // Teal inner glow for depth
-                      blurRadius: 15,
-                      spreadRadius: -4,
+                      ).withOpacity(0.6), // Bright cyan inner glow
+                      blurRadius: 25,
+                      spreadRadius: -2,
                       offset: const Offset(0, 0),
                     ),
                   ],
@@ -300,10 +360,13 @@ class PreviewScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 70),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Choose Another'),
+              SafeArea(
+                bottom: true,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Choose Another'),
+                ),
               ),
             ],
           ),
@@ -432,25 +495,25 @@ class _MultiPreviewScreenState extends State<MultiPreviewScreen> {
                             BoxShadow(
                               color: const Color(
                                 0xFF9F00E7,
-                              ).withOpacity(0.6), // Bright neon purple
-                              blurRadius: 30,
-                              spreadRadius: 8,
-                              offset: const Offset(0, 0),
-                            ),
-                            BoxShadow(
-                              color: const Color(
-                                0xFFFF6F98,
-                              ).withOpacity(0.4), // Add pink outer halo
-                              blurRadius: 50,
+                              ).withOpacity(0.7), // Stronger neon purple glow
+                              blurRadius: 40,
                               spreadRadius: 12,
                               offset: const Offset(0, 0),
                             ),
                             BoxShadow(
                               color: const Color(
+                                0xFFFF6F98,
+                              ).withOpacity(0.3), // Subtle pink outer halo
+                              blurRadius: 60,
+                              spreadRadius: 15,
+                              offset: const Offset(0, 0),
+                            ),
+                            BoxShadow(
+                              color: const Color(
                                 0xFF05ADED,
-                              ).withOpacity(0.3), // Teal inner glow for depth
-                              blurRadius: 15,
-                              spreadRadius: -4,
+                              ).withOpacity(0.6), // Bright cyan inner glow
+                              blurRadius: 25,
+                              spreadRadius: -2,
                               offset: const Offset(0, 0),
                             ),
                           ],
@@ -466,12 +529,17 @@ class _MultiPreviewScreenState extends State<MultiPreviewScreen> {
             ),
           ),
           if (!_isUploading)
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: ElevatedButton.icon(
-                onPressed: _uploadAll,
-                icon: const Icon(Icons.upload),
-                label: Text('Upload All ${widget.imageFiles.length} Photos'),
+            SafeArea(
+              bottom: true,
+              child: Padding(
+                padding: const EdgeInsets.all(20).add(
+                  const EdgeInsets.only(bottom: 20),
+                ), // Extra bottom padding for Android nav bar
+                child: ElevatedButton.icon(
+                  onPressed: _uploadAll,
+                  icon: const Icon(Icons.upload),
+                  label: Text('Upload All ${widget.imageFiles.length} Photos'),
+                ),
               ),
             ),
         ],
@@ -526,6 +594,57 @@ class _GalleryScreenState extends State<GalleryScreen> {
     }
   }
 
+  Future<void> _downloadSelected() async {
+    int successCount = 0;
+    int failCount = 0;
+
+    final bool hasAccess = await Gal.hasAccess();
+    if (!hasAccess) {
+      final bool granted = await Gal.requestAccess();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Photo library permission denied')),
+          );
+        }
+        return;
+      }
+    }
+
+    for (var filename in selectedFilenames) {
+      try {
+        final response = await http.get(
+          Uri.parse('$serverUrl/images/$filename'),
+        );
+        if (response.statusCode == 200) {
+          await Gal.putImageBytes(response.bodyBytes, album: 'CircleScreen');
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (e) {
+        failCount++;
+      }
+    }
+
+    if (mounted) {
+      String message;
+      if (failCount == 0) {
+        message =
+            '${selectedFilenames.length} photo(s) downloaded successfully! 📸';
+      } else {
+        message =
+            'Downloaded $successCount of ${selectedFilenames.length}. $failCount failed.';
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+      setState(() {
+        selectedFilenames.clear();
+      });
+    }
+  }
+
   Future<void> _setAsCurrent(String filename) async {
     try {
       final imgResponse = await http.get(
@@ -567,6 +686,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
         ),
         actions: isSelecting
             ? [
+                IconButton(
+                  icon: const Icon(Icons.download),
+                  onPressed: _downloadSelected,
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete),
                   onPressed: () => showCupertinoDialog(
