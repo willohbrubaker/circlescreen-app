@@ -132,7 +132,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadRandomImage() async {
     try {
-      final response = await http.get(Uri.parse('$serverUrl/list'));
+      final response = await http.get(Uri.parse('$serverUrl/list/pattie'));
       if (response.statusCode == 200 && mounted) {
         final List<String> filenames = List<String>.from(
           json.decode(response.body),
@@ -145,7 +145,7 @@ class _HomePageState extends State<HomePage> {
             final selected = available[random.nextInt(available.length)];
             setState(() {
               _imageFilenames = available;
-              _currentImageUrl = '$serverUrl/images/$selected';
+              _currentImageUrl = '$serverUrl/images/pattie/$selected';
             });
           }
         }
@@ -167,7 +167,7 @@ class _HomePageState extends State<HomePage> {
         final selected =
             _imageFilenames[random.nextInt(_imageFilenames.length)];
         setState(() {
-          _currentImageUrl = '$serverUrl/images/$selected';
+          _currentImageUrl = '$serverUrl/images/pattie/$selected';
         });
       }
     });
@@ -237,6 +237,7 @@ class _HomePageState extends State<HomePage> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
+                    // Rainbow sweep gradient ring
                     Container(
                       width: 180,
                       height: 180,
@@ -244,14 +245,14 @@ class _HomePageState extends State<HomePage> {
                         shape: BoxShape.circle,
                         gradient: SweepGradient(
                           colors: [
-                            const Color(0xFF00FFFF), // Bright cyan
-                            const Color(0xFF008B8B), // Dark cyan
-                            const Color(0xFF0000FF), // Pure blue
-                            const Color(0xFF8A2BE2), // Blue violet
-                            const Color(0xFF9F00E7), // Neon purple
-                            const Color(0xFF05ADED), // Electric teal
-                            const Color(0xFF20B2AA), // Light sea green
-                            const Color(0xFF00FFFF), // Back to bright cyan
+                            const Color(0xFF00FFFF),
+                            const Color(0xFF008B8B),
+                            const Color(0xFF0000FF),
+                            const Color(0xFF8A2BE2),
+                            const Color(0xFF9F00E7),
+                            const Color(0xFF05ADED),
+                            const Color(0xFF20B2AA),
+                            const Color(0xFF00FFFF),
                           ],
                           stops: const [
                             0.0,
@@ -266,24 +267,22 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-                    // Random image center with fade transition
-                    ClipOval(
-                      child: SizedBox(
-                        width: 160,
-                        height: 160,
+                    // Center image: EXACTLY matches device preview (240x240 circle crop)
+                    Container(
+                      width: 160,
+                      height: 160,
+                      decoration: BoxDecoration(shape: BoxShape.circle),
+                      child: ClipOval(
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 1200),
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: child,
-                            );
-                          },
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(opacity: animation, child: child),
                           child: _currentImageUrl != null
                               ? CachedNetworkImage(
                                   key: ValueKey(_currentImageUrl),
                                   imageUrl: _currentImageUrl!,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit
+                                      .cover, // This ensures center crop, just like device
                                   placeholder: (_, __) => const Center(
                                     child: CircularProgressIndicator(),
                                   ),
@@ -313,7 +312,7 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Share beautiful photos to your circular display',
+                'Upload photos to your circular display!',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 19, color: Colors.white70),
               ),
@@ -340,7 +339,10 @@ class PreviewScreen extends StatelessWidget {
   const PreviewScreen({super.key, required this.imageFile});
 
   Future<void> _upload(BuildContext context) async {
-    var request = http.MultipartRequest('POST', Uri.parse('$serverUrl/upload'));
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$serverUrl/upload/pattie'),
+    );
     request.files.add(
       await http.MultipartFile.fromPath('image', imageFile.path),
     );
@@ -467,7 +469,7 @@ class _MultiPreviewScreenState extends State<MultiPreviewScreen> {
 
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('$serverUrl/upload'),
+          Uri.parse('$serverUrl/upload/pattie'),
         );
 
         request.files.add(
@@ -635,7 +637,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   Future<List<String>> _fetchImages() async {
     try {
-      final response = await http.get(Uri.parse('$serverUrl/list'));
+      final response = await http.get(Uri.parse('$serverUrl/list/pattie'));
       if (response.statusCode == 200) {
         return List<String>.from(json.decode(response.body));
       }
@@ -645,7 +647,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   Future<void> _deleteSelected() async {
     for (var filename in selectedFilenames) {
-      await http.delete(Uri.parse('$serverUrl/delete/$filename'));
+      await http.delete(Uri.parse('$serverUrl/delete/pattie/$filename'));
     }
     _refreshImages();
     if (mounted) {
@@ -682,7 +684,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
     for (var filename in selectedFilenames) {
       try {
         final response = await http.get(
-          Uri.parse('$serverUrl/images/$filename'),
+          Uri.parse('$serverUrl/images/pattie/$filename'),
         );
         if (response.statusCode == 200) {
           await Gal.putImageBytes(response.bodyBytes, album: 'CircleScreen');
@@ -738,7 +740,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
 
     try {
-      final response = await http.get(Uri.parse('$serverUrl/images/$filename'));
+      final response = await http.get(
+        Uri.parse('$serverUrl/images/pattie/$filename'),
+      );
       if (response.statusCode == 200) {
         await Gal.putImageBytes(response.bodyBytes, album: 'CircleScreen');
         if (mounted) {
@@ -854,7 +858,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
               itemCount: images.length,
               itemBuilder: (context, index) {
                 final filename = images[index];
-                final imageUrl = '$serverUrl/images/$filename';
+                final imageUrl = '$serverUrl/images/pattie/$filename';
                 final isCurrent = filename == 'current.jpg';
                 final isSelected = selectedFilenames.contains(filename);
 
@@ -964,7 +968,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Future<void> _deleteImage(String filename) async {
-    await http.delete(Uri.parse('$serverUrl/delete/$filename'));
+    await http.delete(Uri.parse('$serverUrl/delete/pattie/$filename'));
     _refreshImages();
   }
 }
