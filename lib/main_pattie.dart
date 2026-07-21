@@ -22,7 +22,7 @@ Map<String, String> getAuthHeaders() => {
   'Authorization': 'Bearer $bearerToken',
 };
 
-String serverUrl = 'http://108.254.1.184:9026';
+String serverUrl = 'https://pearlgourami.immenseaccumulationonline.online:9026';
 
 void main() {
   runApp(const CircleScreenApp());

@@ -80,7 +80,7 @@ class CircleScreenApp extends StatelessWidget {
   }
 }
 
-String serverUrl = 'http://108.254.1.184:9026';
+String serverUrl = 'https://pearlgourami.immenseaccumulationonline.online:443';
 
 Future<String> getCurrentUser() async {
   final user = await _storage.read(key: 'selected_screen');
